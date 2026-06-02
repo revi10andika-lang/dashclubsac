@@ -119,37 +119,21 @@
 
     <script>
         // --- 1. DATA MASTER & AUTENTIKASI ---
-        // --- CEK LOGIN HYBRID UNTUK ABSENSI ---
-        const urlParams = new URLSearchParams(window.location.search);
-        let currentUser = JSON.parse(localStorage.getItem('sac_currentUser'));
-
-        if (!currentUser && urlParams.has('nama')) {
-            currentUser = {
-                nama: urlParams.get('nama'),
-                isAdmin: urlParams.get('admin') === 'true'
-            };
-            localStorage.setItem('sac_currentUser', JSON.stringify(currentUser));
-        }
-
+       // --- CEK LOGIN & TARIK DATA MASTER (BERSIH) ---
+        const currentUser = JSON.parse(localStorage.getItem('sac_currentUser'));
         if (!currentUser) {
             alert("Anda belum login! Dialihkan ke halaman utama.");
             window.location.href = "index.html";
         }
 
-        // Ambil data anggota dari Local Storage (dari index.html)
-        // PRO: Tangkap kamus anggota dari URL agar sinkron dengan index.html
-            const dataAnggota = {};
-            const paketAtlet = urlParams.get('atlet');
-            if (paketAtlet) {
-                const daftarAtlet = paketAtlet.split(',');
-                daftarAtlet.forEach(item => {
-                const bagian = item.split('|');
-                if (bagian.length === 2) {
-                    dataAnggota[bagian[0]] = bagian[1]; // Mapping SAC-001 -> Ahmad Fatih
-                }
+        // Ambil data anggota langsung dari database lokal
+        const appState = JSON.parse(localStorage.getItem('sac_appState'));
+        const dataAnggota = {};
+        if (appState && appState.anggota) {
+            appState.anggota.forEach(a => {
+                dataAnggota[a.id] = a.nama; // Mapping SAC-001 -> Ahmad Fatih
             });
         }
-
         // Ambil riwayat absen yang sudah ada
         let riwayatAbsen = JSON.parse(localStorage.getItem('sac_riwayatAbsen')) || [];
 
