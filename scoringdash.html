@@ -246,26 +246,14 @@
 
 <!-- Script Logika Aplikasi -->
 <script>
-// --- UTUH & KUAT: CEK LOGIN HYBRID (MENDUKUNG OFFLINE FILE & SERVER) ---
-    const urlParams = new URLSearchParams(window.location.search);
-    let currentUser = JSON.parse(localStorage.getItem('sac_currentUser'));
-
-    // Jika localStorage kosong (efek batasan file://), baca data dari kiriman URL Parameter
-    if (!currentUser && urlParams.has('nama')) {
-        currentUser = {
-            nama: urlParams.get('nama'),
-            isAdmin: urlParams.get('admin') === 'true'
-        };
-        // Daftarkan ke localStorage lokal file ini sebagai cadangan berkas
-        localStorage.setItem('sac_currentUser', JSON.stringify(currentUser));
-    }
-
+    // --- CEK LOGIN BERSIH (KARENA SUDAH DI-DEPLOY) ---
+    const currentUser = JSON.parse(localStorage.getItem('sac_currentUser'));
+    
     if (!currentUser) {
         alert("Anda belum login! Dialihkan ke halaman utama.");
         window.location.href = "index.html";
     }
     const isRealAdmin = currentUser.isAdmin;
-    // --------------------------------
 
     // Generator ID sederhana
     const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -698,11 +686,42 @@
             document.getElementById('toggleAdmin').parentElement.style.display = 'none'; 
         }
     });
-   // --- UTUH & SEMPURNA: KENDALI AKSES BERDASARKAN ROLE (ADMIN / USER) ---
+// --- UTUH & SEMPURNA: KENDALI AKSES & TARIK DATA ANGGOTA ---
     document.addEventListener('DOMContentLoaded', () => {
         const linkSettings = document.getElementById('linkSettings');
         const toggleAdminPanel = document.getElementById('toggleAdmin').parentElement;
         const adminDataContainer = document.getElementById('adminDataContainer');
+
+        // 1. TARIK DATA ANGGOTA LANGSUNG DARI LOCAL STORAGE
+        const appState = JSON.parse(localStorage.getItem('sac_appState'));
+        const inputNamaSelect = document.getElementById('inputNama');
+
+        // Cek apakah elemen dropdown ada dan data anggota tidak kosong
+        if (inputNamaSelect && appState && appState.anggota) {
+            // Bersihkan dropdown dulu
+            inputNamaSelect.innerHTML = '<option value="">-- Pilih Atlet / Siswa --</option>';
+            
+            // Looping data anggota dan masukkan ke dropdown
+            appState.anggota.forEach(a => {
+                const option = document.createElement('option');
+                option.value = a.nama; // Value yang akan disimpan di scoring
+                option.textContent = `${a.id} - ${a.nama} (${a.role})`;
+                inputNamaSelect.appendChild(option);
+            });
+        }
+
+        // 2. KONTROL AKSES ROLE ADMIN/USER
+        if (isRealAdmin) {
+            document.getElementById('toggleAdmin').checked = true;
+            if (adminDataContainer) adminDataContainer.classList.remove('hidden');
+            if (toggleAdminPanel) toggleAdminPanel.style.display = 'none'; 
+            if (linkSettings) linkSettings.style.display = 'flex'; 
+        } else {
+            if (linkSettings) linkSettings.style.display = 'none'; 
+            if (toggleAdminPanel) toggleAdminPanel.style.display = 'none'; 
+            if (adminDataContainer) adminDataContainer.classList.add('hidden'); 
+        }
+    });
 
 // ===================================================================
         // PRO: TANGKAP DATA ANGGOTA DARI URL UNTUK DROPDOWN SCORING
