@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halaman Data Skor</title>
+    
+    <!-- Import Tailwind CSS via CDN untuk penataan gaya -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Import FontAwesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Import Chart.js untuk grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* Penyesuaian warna khusus agar lebih mirip dengan gambar */
+        .bg-custom-blue { background-color: #007bff; }
+        .bg-custom-purple { background-color: #6f42c1; }
+        .text-custom-blue { color: #007bff; }
+        .text-custom-red { color: #dc3545; }
+    </style>
+</head>
+<body class="bg-white text-gray-800 font-sans antialiased min-h-screen p-4 md:p-8">
+
+<div class="max-w-6xl mx-auto">
+
+    <!-- Header Tambahan: Nama Club -->
+    <div class="text-center mb-6">
+        <h1 id="clubNameDisplay" class="text-3xl font-extrabold text-custom-blue tracking-wide uppercase">Sunnah Archery</h1>
+        <p class="text-gray-500 text-sm mt-1">Sistem Rekapitulasi Skor</p>
+    </div>
+
+    <!-- 1. Menu Navigasi Atas -->
+    <header class="mb-6">
+        <nav class="flex justify-center items-center gap-3 text-sm font-bold">
+            <a href="#" id="linkInput" class="text-custom-blue hover:text-blue-800 flex items-center gap-1 transition-colors">
+                <i class="fas fa-edit text-gray-400"></i> Input Score
+            </a> 
+            <span class="text-gray-300 font-normal">|</span>
+            <a href="#" id="linkSettings" class="text-custom-blue hover:text-blue-800 flex items-center gap-1 transition-colors">
+                <i class="fas fa-cog text-gray-400"></i> Settings
+            </a> 
+        </nav>
+    </header>
+
+    <!-- Wrapper Tampilan Utama -->
+    <div id="mainView">
+
+    <!-- 2. Bagian Pencarian -->
+    <section class="mb-4">
+        <div class="max-w-4xl mx-auto">
+            <input type="text" id="searchData" placeholder="Filter nama siswa untuk melihat grafik..." 
+                   class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+        </div>
+    </section>
+
+    <!-- 3. Tombol Aksi (Filter Tanggal & AI Dihapus) -->
+    <section class="flex justify-center items-center gap-3 mb-6">
+        <button id="btnGrafikScore" class="bg-custom-blue hover:bg-blue-700 text-white font-medium py-2 px-4 rounded shadow-sm flex items-center gap-2 transition-colors">
+            <i class="fas fa-chart-line text-yellow-300"></i> Grafik Score
+        </button>
+    </section>
+
+    <!-- 5. Opsi Pengurutan (Sorting) -->
+    <section class="flex flex-col items-center gap-2 mb-6 text-sm font-medium">
+        <div class="flex items-center gap-3">
+            <span class="font-bold">Sort By:</span>
+            <label class="flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="sortBy" value="date" checked class="text-blue-500 focus:ring-blue-500"> Date
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="sortBy" value="bestScore" class="text-blue-500 focus:ring-blue-500"> Best Score
+            </label>
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="flex items-center gap-2 cursor-pointer font-normal text-gray-700">
+                <input type="checkbox" name="descending" class="rounded text-blue-500 focus:ring-blue-500"> Dari Besar Ke Kecil (Descending)
+            </label>
+        </div>
+    </section>
+
+    <!-- 6. Tabel Data -->
+    <section class="w-full overflow-x-auto bg-white rounded shadow-sm border border-gray-200">
+        <table class="w-full text-sm text-left border-collapse whitespace-nowrap">
+            <thead class="bg-custom-blue text-white font-semibold">
+                <tr>
+                    <th class="py-3 px-4 border-b border-blue-600">Nama Siswa</th>
+                    <th class="py-3 px-4 border-b border-blue-600">Tanggal</th>
+                    <th class="py-3 px-4 border-b border-blue-600">Sesi 1</th>
+                    <th class="py-3 px-4 border-b border-blue-600">Sesi 2</th>
+                    <th class="py-3 px-4 border-b border-blue-600">Sesi 3</th>
+                    <th class="py-3 px-4 border-b border-blue-600">Sesi 4</th>
+                    <th class="py-3 px-4 border-b border-blue-600">Total</th>
+                    <th class="py-3 px-4 border-b border-blue-600">Divisi</th>
+                    <th class="py-3 px-4 border-b border-blue-600">Jarak</th>
+                    <th class="py-3 px-4 border-b border-blue-600">Keterangan</th>
+                </tr>
+            </thead>
+            <!-- Beri ID pada tbody dan kosongkan isinya, karena akan diisi oleh JavaScript -->
+            <tbody id="tableBody" class="text-gray-700">
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Kontainer Paginasi -->
+    <div id="paginationContainer" class="flex justify-end items-center gap-1 mt-4 text-sm">
+        <!-- Tombol paginasi akan muncul di sini -->
+    </div>
+
+    <!-- Kontainer Grafik Score -->
+    <div id="chartContainer" class="hidden mt-8 bg-white p-4 rounded shadow-sm border border-gray-200">
+        <h3 id="chartAthleteName" class="text-lg font-bold text-center text-custom-blue mb-4">Grafik Score</h3>
+        <div class="relative h-64 w-full">
+            <canvas id="scoreChart"></canvas>
+        </div>
+    </div>
+
+    </div> <!-- Akhir dari mainView -->
+
+    <!-- Wrapper Tampilan Input Score -->
+    <div id="inputView" class="hidden bg-white rounded shadow-sm border border-gray-200 p-6 max-w-3xl mx-auto mb-10">
+        <h2 class="text-2xl font-bold mb-6 text-custom-blue border-b pb-2">Form Input Score Baru</h2>
+        <form id="formInputScore" class="space-y-4">
+            <!-- Nama -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Siswa</label>
+                <select id="inputNama" required class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none            focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white">
+                <option value="">-- Pilih Atlet / Siswa --</option>
+                </select>
+            </div>
+            <!-- Tanggal -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Scoring</label>
+                <input type="date" id="inputTanggal" required class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+            </div>
+            <!-- Sesi Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Score Sesi 1</label>
+                    <input type="number" id="inputSesi1" min="0" class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Score Sesi 2</label>
+                    <input type="number" id="inputSesi2" min="0" class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Score Sesi 3</label>
+                    <input type="number" id="inputSesi3" min="0" class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Score Sesi 4</label>
+                    <input type="number" id="inputSesi4" min="0" class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+            </div>
+            <!-- Divisi & Jarak -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Divisi</label>
+                    <select id="inputDivisi" required class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                        <option value="">-- Pilih Divisi --</option>
+                        <option value="Compound">Compound</option>
+                        <option value="Standarbow">Standarbow</option>
+                        <option value="Recurve">Recurve</option>
+                        <option value="Barebow">Barebow</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Jarak Scoring (Meter)</label>
+                    <input type="number" id="inputJarak" required min="1" placeholder="Contoh: 50" class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+            </div>
+            <!-- Keterangan -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+                <textarea id="inputKeterangan" rows="2" placeholder="Tuliskan keterangan (opsional)" class="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"></textarea>
+            </div>
+            <!-- Buttons -->
+            <div class="flex justify-end gap-2 mt-6">
+                <button type="button" id="btnCancel" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition-colors">Batal</button>
+                <button type="submit" class="bg-custom-blue hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors">Simpan Data</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Wrapper Tampilan Settings -->
+    <div id="settingsView" class="hidden bg-white rounded shadow-sm border border-gray-200 p-6 max-w-5xl mx-auto mb-10">
+        <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 mb-6 gap-4">
+            <h2 class="text-2xl font-bold text-custom-blue">Settings & Manajemen Data</h2>
+            <button id="btnBackFromSettings" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition-colors text-sm"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Dashboard</button>
+        </div>
+
+        <!-- Pengaturan Umum -->
+        <div class="mb-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3"><i class="fas fa-building text-gray-500 mr-2"></i>Pengaturan Umum</h3>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input type="text" id="inputSettingClub" value="Sunnah Archery" class="border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-blue-500 w-full sm:w-64" placeholder="Masukkan nama club...">
+                <button id="btnSaveClub" class="bg-custom-blue hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm whitespace-nowrap">Simpan Nama</button>
+            </div>
+        </div>
+
+        <!-- Manajemen Data (Hanya untuk Admin) -->
+        <div id="adminDataContainer" class="border-t pt-6 mt-4">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
+                <h3 class="text-lg font-semibold text-gray-800"><i class="fas fa-database text-gray-500 mr-2"></i>Manajemen Data Scoring</h3>
+                <button id="btnAddNewFromAdmin" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm shadow-sm"><i class="fas fa-plus mr-1"></i> Tambah Data Baru</button>
+            </div>
+            
+            <div class="overflow-x-auto bg-white rounded border border-gray-200">
+                <table class="w-full text-sm text-left border-collapse whitespace-nowrap">
+                    <thead class="bg-gray-100 text-gray-700 font-semibold">
+                        <tr>
+                            <th class="py-2 px-4 border-b">Nama Siswa</th>
+                            <th class="py-2 px-4 border-b">Tanggal</th>
+                            <th class="py-2 px-4 border-b">Total Score</th>
+                            <th class="py-2 px-4 border-b text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody" class="text-gray-700">
+                        <!-- Data admin akan dimuat di sini -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Hapus -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg max-w-sm w-full mx-4">
+            <h3 class="text-lg font-bold mb-2 text-gray-800">Konfirmasi Hapus</h3>
+            <p class="text-gray-600 mb-6">Yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.</p>
+            <div class="flex justify-end gap-2">
+                <button id="btnCancelDelete" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition-colors">Batal</button>
+                <button id="btnConfirmDelete" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded transition-colors">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification (Notifikasi Melayang) -->
+    <div id="toastMessage" class="hidden fixed bottom-4 right-4 bg-green-500 text-white px-4 py-3 rounded shadow-lg z-50 transition-opacity duration-300 flex items-center gap-2">
+        <i class="fas fa-check-circle"></i> <span id="toastText">Pesan sukses</span>
+    </div>
+
+</div>
+
+<!-- Script Logika Aplikasi -->
+<script>
+// --- UTUH & KUAT: CEK LOGIN HYBRID (MENDUKUNG OFFLINE FILE & SERVER) ---
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentUser = JSON.parse(localStorage.getItem('sac_currentUser'));
+
+    // Jika localStorage kosong (efek batasan file://), baca data dari kiriman URL Parameter
+    if (!currentUser && urlParams.has('nama')) {
+        currentUser = {
+            nama: urlParams.get('nama'),
+            isAdmin: urlParams.get('admin') === 'true'
+        };
+        // Daftarkan ke localStorage lokal file ini sebagai cadangan berkas
+        localStorage.setItem('sac_currentUser', JSON.stringify(currentUser));
+    }
+
+    if (!currentUser) {
+        alert("Anda belum login! Dialihkan ke halaman utama.");
+        window.location.href = "index.html";
+    }
+    const isRealAdmin = currentUser.isAdmin;
+    // --------------------------------
+
+    // Generator ID sederhana
+    const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
+
+    // --- MODIFIKASI: AMBIL DARI LOCAL STORAGE ATAU GUNAKAN DUMMY ---
+    let savedScores = JSON.parse(localStorage.getItem('sac_scoreData'));
+    let initialData = savedScores || [
+        { id: generateId(), nama: "Sahirah Izz Zayani Setiady", tanggal: "2025-09-06", sesi1: 328, sesi2: 328, sesi3: "", sesi4: "", total: 656, divisi: "Compound", jarak: 50, keterangan: "PORKOT" },
+        { id: generateId(), nama: "Aisyah Nada Shakila Swep", tanggal: "2025-11-01", sesi1: 319, sesi2: 311, sesi3: "", sesi4: "", total: 630, divisi: "Standarbow", jarak: 10, keterangan: "" },
+        { id: generateId(), nama: "Lovely Berliana Zilcy", tanggal: "2025-11-01", sesi1: 276, sesi2: 306, sesi3: "", sesi4: "", total: 582, divisi: "Standarbow", jarak: 20, keterangan: "" },
+        { id: generateId(), nama: "Zhaera Syafitri Wibisono", tanggal: "2025-11-01", sesi1: 333, sesi2: 335, sesi3: "", sesi4: "", total: 668, divisi: "Compound", jarak: 40, keterangan: "" },
+        { id: generateId(), nama: "Mezzaluna Permata Zilcy", tanggal: "2025-11-01", sesi1: 310, sesi2: 302, sesi3: "", sesi4: "", total: 612, divisi: "Standarbow", jarak: 20, keterangan: "" },
+        { id: generateId(), nama: "Yusuf Al Fatih", tanggal: "2025-11-01", sesi1: 262, sesi2: 283, sesi3: "", sesi4: "", total: 545, divisi: "Standarbow", jarak: 7, keterangan: "" },
+        { id: generateId(), nama: "Muhammad Ayman Shamil", tanggal: "2025-11-01", sesi1: 280, sesi2: 280, sesi3: "", sesi4: "", total: 560, divisi: "Compound", jarak: 40, keterangan: "" },
+        { id: generateId(), nama: "Budi Santoso", tanggal: "2025-10-15", sesi1: 300, sesi2: 310, sesi3: "", sesi4: "", total: 610, divisi: "Recurve", jarak: 70, keterangan: "Latihan" },
+        { id: generateId(), nama: "Siti Aminah", tanggal: "2025-10-16", sesi1: 290, sesi2: 295, sesi3: "", sesi4: "", total: 585, divisi: "Standarbow", jarak: 30, keterangan: "" },
+        { id: generateId(), nama: "Andi Wijaya", tanggal: "2025-10-17", sesi1: 340, sesi2: 330, sesi3: "", sesi4: "", total: 670, divisi: "Compound", jarak: 50, keterangan: "Seleksi" },
+        { id: generateId(), nama: "Rina Melati", tanggal: "2025-10-18", sesi1: 250, sesi2: 260, sesi3: "", sesi4: "", total: 510, divisi: "Standarbow", jarak: 15, keterangan: "" },
+        { id: generateId(), nama: "Joko Anwar", tanggal: "2025-10-19", sesi1: 315, sesi2: 320, sesi3: "", sesi4: "", total: 635, divisi: "Recurve", jarak: 70, keterangan: "" }
+    ];
+
+    // Fungsi untuk menyimpan perubahan ke Local Storage
+    function saveScores() {
+        localStorage.setItem('sac_scoreData', JSON.stringify(initialData));
+    }
+    // ------------------------------------------------------------------
+
+    // State Aplikasi
+
+    // State Aplikasi
+    let currentPage = 1;
+    const rowsPerPage = 10;
+    let filteredData = [...initialData];
+    let editDataId = null; // Menyimpan ID data yang sedang diedit
+
+    // Mengambil elemen DOM Utama
+    const tbody = document.getElementById('tableBody');
+    const paginationContainer = document.getElementById('paginationContainer');
+    const searchInput = document.getElementById('searchData');
+    const sortRadios = document.querySelectorAll('input[name="sortBy"]');
+    const descCheckbox = document.querySelector('input[name="descending"]');
+    const btnGrafikScore = document.getElementById('btnGrafikScore');
+
+    // Mengambil elemen DOM Views
+    const mainView = document.getElementById('mainView');
+    const inputView = document.getElementById('inputView');
+    const settingsView = document.getElementById('settingsView');
+    
+    // Mengambil elemen Navigasi & Form
+    const linkInput = document.getElementById('linkInput');
+    const linkSettings = document.getElementById('linkSettings');
+    const btnCancel = document.getElementById('btnCancel');
+    const btnBackFromSettings = document.getElementById('btnBackFromSettings');
+    const formInputScore = document.getElementById('formInputScore');
+    const formTitle = document.querySelector('#inputView h2');
+
+    // Mengambil elemen DOM Settings Khusus
+    const clubNameDisplay = document.getElementById('clubNameDisplay');
+    const inputSettingClub = document.getElementById('inputSettingClub');
+    const btnSaveClub = document.getElementById('btnSaveClub');
+    const toggleAdmin = document.getElementById('toggleAdmin');
+    const adminDataContainer = document.getElementById('adminDataContainer');
+    const adminTableBody = document.getElementById('adminTableBody');
+    const btnAddNewFromAdmin = document.getElementById('btnAddNewFromAdmin');
+
+    // Mengambil elemen Modal & Toast
+    const deleteModal = document.getElementById('deleteModal');
+    const btnCancelDelete = document.getElementById('btnCancelDelete');
+    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+    const toastMessage = document.getElementById('toastMessage');
+    const toastText = document.getElementById('toastText');
+    let dataIdToDelete = null;
+
+    // --- FUNGSI TOAST NOTIFICATION ---
+    function showToast(message, type = 'success') {
+        toastText.innerText = message;
+        toastMessage.className = `fixed bottom-4 right-4 text-white px-4 py-3 rounded shadow-lg z-50 transition-opacity duration-300 flex items-center gap-2 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+        toastMessage.classList.remove('hidden');
+        setTimeout(() => {
+            toastMessage.classList.add('hidden');
+        }, 3000);
+    }
+
+    // --- FUNGSI RENDER TABEL UTAMA ---
+    function renderTable() {
+        const searchTerm = searchInput.value.toLowerCase();
+
+        filteredData = initialData.filter(row => {
+            return row.nama.toLowerCase().includes(searchTerm) || row.divisi.toLowerCase().includes(searchTerm);
+        });
+
+        const sortBy = document.querySelector('input[name="sortBy"]:checked').value;
+        const isDesc = descCheckbox.checked;
+
+        filteredData.sort((a, b) => {
+            let valA, valB;
+            if (sortBy === 'date') {
+                valA = new Date(a.tanggal).getTime();
+                valB = new Date(b.tanggal).getTime();
+            } else if (sortBy === 'bestScore') {
+                valA = a.total;
+                valB = b.total;
+            }
+
+            if (valA < valB) return isDesc ? 1 : -1;
+            if (valA > valB) return isDesc ? -1 : 1;
+            return 0;
+        });
+
+        const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+        if (currentPage > totalPages) currentPage = totalPages || 1; 
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, startIndex + rowsPerPage);
+
+        tbody.innerHTML = '';
+        if (paginatedData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">Tidak ada data yang cocok</td></tr>`;
+        } else {
+            paginatedData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 border-b border-gray-200">${row.nama}</td>
+                    <td class="py-3 px-4 border-b border-gray-200">${row.tanggal}</td>
+                    <td class="py-3 px-4 border-b border-gray-200">${row.sesi1}</td>
+                    <td class="py-3 px-4 border-b border-gray-200">${row.sesi2}</td>
+                    <td class="py-3 px-4 border-b border-gray-200">${row.sesi3 || ''}</td>
+                    <td class="py-3 px-4 border-b border-gray-200">${row.sesi4 || ''}</td>
+                    <td class="py-3 px-4 border-b border-gray-200 font-medium">${row.total}</td>
+                    <td class="py-3 px-4 border-b border-gray-200">${row.divisi}</td>
+                    <td class="py-3 px-4 border-b border-gray-200">${row.jarak}</td>
+                    <td class="py-3 px-4 border-b border-gray-200">${row.keterangan}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        renderPagination(totalPages);
+    }
+
+    // --- FUNGSI RENDER PAGINASI ---
+    function renderPagination(totalPages) {
+        paginationContainer.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const createBtn = (text, page, disabled, active) => {
+            const btn = document.createElement('button');
+            btn.innerHTML = text;
+            btn.className = `px-3 py-1 border rounded transition-colors ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-100'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+            if (!disabled && !active) {
+                btn.onclick = () => {
+                    currentPage = page;
+                    renderTable();
+                };
+            }
+            return btn;
+        };
+
+        paginationContainer.appendChild(createBtn('&laquo; Prev', currentPage - 1, currentPage === 1, false));
+        for (let i = 1; i <= totalPages; i++) {
+            paginationContainer.appendChild(createBtn(i, i, false, currentPage === i));
+        }
+        paginationContainer.appendChild(createBtn('Next &raquo;', currentPage + 1, currentPage === totalPages, false));
+    }
+
+    // --- FUNGSI RENDER TABEL ADMIN (SETTINGS) ---
+    function renderAdminTable() {
+        adminTableBody.innerHTML = '';
+        
+        // Tampilkan semua data di tabel admin tanpa paginasi (diurutkan berdasarkan tanggal terbaru)
+        const sortedData = [...initialData].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+        
+        if(sortedData.length === 0) {
+             adminTableBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-500">Data kosong</td></tr>`;
+             return;
+        }
+
+        sortedData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50 border-b";
+            tr.innerHTML = `
+                <td class="py-2 px-4">${row.nama}</td>
+                <td class="py-2 px-4">${row.tanggal}</td>
+                <td class="py-2 px-4 font-bold text-custom-blue">${row.total}</td>
+                <td class="py-2 px-4 text-center">
+                    <button onclick="editData('${row.id}')" class="bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-2 rounded text-xs mr-1"><i class="fas fa-edit"></i> Edit</button>
+                    <button onclick="deleteData('${row.id}')" class="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs"><i class="fas fa-trash"></i> Hapus</button>
+                </td>
+            `;
+            adminTableBody.appendChild(tr);
+        });
+    }
+
+    // --- FUNGSI AKSI ADMIN ---
+    window.deleteData = function(id) {
+        dataIdToDelete = id;
+        deleteModal.classList.remove('hidden'); // Tampilkan modal kustom
+    };
+
+    // Event listener untuk tombol di modal konfirmasi hapus
+    btnCancelDelete.addEventListener('click', () => {
+        deleteModal.classList.add('hidden');
+        dataIdToDelete = null;
+    });
+
+    btnConfirmDelete.addEventListener('click', () => {
+        if(dataIdToDelete) {
+            initialData = initialData.filter(item => item.id !== dataIdToDelete);
+            saveScores(); // <-- TAMBAHKAN BARIS INI
+            renderAdminTable(); // Update tabel admin
+            renderTable();      // Update tabel utama
+            
+            deleteModal.classList.add('hidden');
+            dataIdToDelete = null;
+            showToast('Data berhasil dihapus!');
+        }
+    });
+
+    window.editData = function(id) {
+        const data = initialData.find(item => item.id === id);
+        if(!data) return;
+
+        editDataId = id; // Set state sedang edit
+        formTitle.innerText = "Edit Data Score";
+
+        // Isi form dengan data yang ada
+        document.getElementById('inputNama').value = data.nama;
+        document.getElementById('inputTanggal').value = data.tanggal;
+        document.getElementById('inputSesi1').value = data.sesi1;
+        document.getElementById('inputSesi2').value = data.sesi2;
+        document.getElementById('inputSesi3').value = data.sesi3;
+        document.getElementById('inputSesi4').value = data.sesi4;
+        document.getElementById('inputDivisi').value = data.divisi;
+        document.getElementById('inputJarak').value = data.jarak;
+        document.getElementById('inputKeterangan').value = data.keterangan;
+
+        // Beralih ke View Input
+        settingsView.classList.add('hidden');
+        mainView.classList.add('hidden');
+        inputView.classList.remove('hidden');
+    };
+
+    // --- EVENT LISTENERS FILTER & SORT ---
+    searchInput.addEventListener('input', () => { 
+        currentPage = 1; 
+        document.getElementById('chartContainer').classList.add('hidden'); // Sembunyikan grafik saat mengubah pencarian
+        renderTable(); 
+    });
+    sortRadios.forEach(radio => radio.addEventListener('change', renderTable));
+    descCheckbox.addEventListener('change', renderTable);
+
+    // --- EVENT LISTENER GRAFIK SCORE ---
+    let myChart = null;
+    btnGrafikScore.addEventListener('click', () => {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        
+        if (!searchTerm) {
+            showToast('Silakan ketik nama atlet di kotak filter terlebih dahulu!', 'error');
+            return;
+        }
+
+        const chartData = initialData.filter(row => row.nama.toLowerCase().includes(searchTerm));
+
+        if (chartData.length === 0) {
+            showToast('Data siswa tidak ditemukan!', 'error');
+            return;
+        }
+
+        // Ambil nama spesifik (ambil dari data pertama yang cocok)
+        const athleteName = chartData[0].nama;
+        
+        // Filter lagi khusus untuk nama atlet yang persis ini (menghindari nama mirip)
+        // dan urutkan berdasarkan tanggal (terlama ke terbaru)
+        const specificData = initialData
+            .filter(row => row.nama === athleteName)
+            .sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+        const labels = specificData.map(row => row.tanggal);
+        const dataPoints = specificData.map(row => row.total);
+
+        // Tampilkan kontainer Grafik
+        document.getElementById('chartContainer').classList.remove('hidden');
+        document.getElementById('chartAthleteName').innerText = `Perkembangan Score: ${athleteName}`;
+
+        const ctx = document.getElementById('scoreChart').getContext('2d');
+        
+        if (myChart) {
+            myChart.destroy(); // Hancurkan grafik sebelumnya jika ada
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Score',
+                    data: dataPoints,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#007bff',
+                    pointRadius: 5,
+                    fill: true,
+                    tension: 0.3 // Garis agak melengkung
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    });
+
+    // --- EVENT LISTENERS NAVIGASI VIEWS ---
+    function resetViews() {
+        mainView.classList.add('hidden');
+        inputView.classList.add('hidden');
+        settingsView.classList.add('hidden');
+        formInputScore.reset();
+        editDataId = null; 
+        formTitle.innerText = "Form Input Score Baru";
+    }
+
+    linkInput.addEventListener('click', (e) => {
+        e.preventDefault();
+        resetViews();
+        inputView.classList.remove('hidden');
+    });
+
+    linkSettings.addEventListener('click', (e) => {
+        e.preventDefault();
+        resetViews();
+        renderAdminTable();
+        settingsView.classList.remove('hidden');
+    });
+
+    btnCancel.addEventListener('click', () => {
+        resetViews();
+        mainView.classList.remove('hidden'); 
+    });
+
+    btnBackFromSettings.addEventListener('click', () => {
+        resetViews();
+        mainView.classList.remove('hidden');
+    });
+
+    btnAddNewFromAdmin.addEventListener('click', () => {
+        resetViews();
+        inputView.classList.remove('hidden');
+    });
+
+    // --- EVENT LISTENERS SETTINGS ---
+    btnSaveClub.addEventListener('click', () => {
+        const newName = inputSettingClub.value.trim();
+        if(newName) {
+            clubNameDisplay.innerText = newName;
+            showToast('Nama Club berhasil diubah menjadi: ' + newName);
+        } else {
+            showToast('Nama Club tidak boleh kosong!', 'error');
+        }
+    });
+
+    toggleAdmin.addEventListener('change', (e) => {
+        if(e.target.checked) {
+            adminDataContainer.classList.remove('hidden');
+        } else {
+            adminDataContainer.classList.add('hidden');
+        }
+    });
+
+    // --- EVENT LISTENER SUBMIT FORM (TAMBAH / EDIT) ---
+    formInputScore.addEventListener('submit', (e) => {
+        e.preventDefault(); 
+        
+        const s1 = parseInt(document.getElementById('inputSesi1').value) || 0;
+        const s2 = parseInt(document.getElementById('inputSesi2').value) || 0;
+        const s3 = parseInt(document.getElementById('inputSesi3').value) || 0;
+        const s4 = parseInt(document.getElementById('inputSesi4').value) || 0;
+        const totalScore = s1 + s2 + s3 + s4;
+
+        const formData = {
+            nama: document.getElementById('inputNama').value,
+            tanggal: document.getElementById('inputTanggal').value,
+            sesi1: s1 || "", 
+            sesi2: s2 || "",
+            sesi3: s3 || "",
+            sesi4: s4 || "",
+            total: totalScore,
+            divisi: document.getElementById('inputDivisi').value,
+            jarak: parseInt(document.getElementById('inputJarak').value) || 0,
+            keterangan: document.getElementById('inputKeterangan').value
+        };
+
+        if (editDataId) {
+            // Update data yang sudah ada
+            const index = initialData.findIndex(item => item.id === editDataId);
+            if (index !== -1) {
+                initialData[index] = { ...formData, id: editDataId };
+            }
+            showToast('Data berhasil diperbarui!');
+        } else {
+            // Tambah data baru
+            initialData.unshift({ ...formData, id: generateId() });
+            showToast('Data skor baru berhasil ditambahkan!');
+        }
+
+        saveScores(); // <-- TAMBAHKAN BARIS INI
+
+        resetViews();
+        mainView.classList.remove('hidden');
+        
+        searchInput.value = '';
+        currentPage = 1;
+        renderTable();
+        renderAdminTable(); // Pastikan data di background juga update
+    });
+
+    // --- TAMBAHAN BARU: OTOMATIS AKTIFKAN MODE ADMIN ---
+    document.addEventListener('DOMContentLoaded', () => {
+        if(isRealAdmin) {
+            document.getElementById('toggleAdmin').checked = true;
+            document.getElementById('adminDataContainer').classList.remove('hidden');
+            // Sembunyikan toggle manual agar tidak bisa dimainkan user biasa
+            document.getElementById('toggleAdmin').parentElement.style.display = 'none'; 
+        }
+    });
+   // --- UTUH & SEMPURNA: KENDALI AKSES BERDASARKAN ROLE (ADMIN / USER) ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const linkSettings = document.getElementById('linkSettings');
+        const toggleAdminPanel = document.getElementById('toggleAdmin').parentElement;
+        const adminDataContainer = document.getElementById('adminDataContainer');
+
+// ===================================================================
+        // PRO: TANGKAP DATA ANGGOTA DARI URL UNTUK DROPDOWN SCORING
+        // ===================================================================
+        const inputNamaSelect = document.getElementById('inputNama');
+        const paketAtlet = urlParams.get('atlet'); // Ambil paketan dari URL
+        
+        if (paketAtlet && inputNamaSelect) {
+            inputNamaSelect.innerHTML = '<option value="">-- Pilih Atlet / Siswa --</option>';
+            
+            // Bongkar paketan dan masukkan ke dropdown
+            const daftarAtlet = paketAtlet.split(',');
+            daftarAtlet.forEach(item => {
+                const bagian = item.split('|'); // Pisahkan ID dan Nama
+                if(bagian.length === 2) {
+                    const idAtlet = bagian[0];
+                    const namaAtlet = bagian[1];
+                    
+                    const option = document.createElement('option');
+                    option.value = namaAtlet; 
+                    option.textContent = `${idAtlet} - ${namaAtlet}`;
+                    inputNamaSelect.appendChild(option);
+                }
+            });
+        }
+        // ===================================================================
+        if (isRealAdmin) {
+            // 1. Jika yang login ADMIN Asli: Buka semua fitur manajemen data
+            document.getElementById('toggleAdmin').checked = true;
+            if (adminDataContainer) adminDataContainer.classList.remove('hidden');
+            if (toggleAdminPanel) toggleAdminPanel.style.display = 'none'; // Sembunyikan simulator karena sudah admin asli
+            if (linkSettings) linkSettings.style.display = 'flex'; // Pastikan menu settings terlihat
+        } else {
+            // 2. Jika yang login USER BIASA: Sembunyikan semua akses edit & hapus
+            if (linkSettings) linkSettings.style.display = 'none'; // Menu Settings dihilangkan dari pandangan user
+            if (toggleAdminPanel) toggleAdminPanel.style.display = 'none'; // Simulator admin dihilangkan
+            if (adminDataContainer) adminDataContainer.classList.add('hidden'); // Kunci total kontainer data manajemen
+        }
+    });
+
+    // Inisialisasi awal untuk memuat tabel utama
+    renderTable();
+</script>
+</body>
+</html>

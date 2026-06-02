@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Absensi Atlet</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome untuk Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Library HTML5 QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <style>
+        /* Custom CSS untuk efek garis scanner yang bergerak naik turun */
+        @keyframes scan-animation {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        .scan-line {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: #10b981; 
+            box-shadow: 0 0 15px #10b981, 0 0 5px #10b981;
+            animation: scan-animation 2s infinite linear;
+        }
+        
+        /* Memastikan feed kamera memenuhi kotak */
+        #reader video {
+            object-fit: cover !important;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 0.75rem;
+        }
+        /* Menyembunyikan elemen bawaan library QR */
+        #reader__dashboard_section_csr, #reader__dashboard_section_swaplink {
+            display: none !important; 
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+    <!-- Navbar / Header -->
+    <nav class="bg-sky-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-clipboard-list text-2xl"></i>
+                <h1 class="text-xl font-bold">Sistem Absensi</h1>
+            </div>
+            <div class="text-sm bg-emerald-700 px-3 py-1 rounded-full">
+                <i class="fa-solid fa-clock mr-1"></i> <span id="jam-realtime">00:00</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Konten Utama -->
+    <main class="py-8">
+        <div id="page-absensi" class="max-w-3xl mx-auto px-4">
+            <div class="bg-white rounded-2xl shadow-lg p-6 text-center border border-gray-100">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Absensi Atlet</h2>
+                <p class="text-gray-500 mb-6">Arahkan QR Code ke kamera untuk absen kehadiran.</p>
+                
+                <!-- Frame Kamera -->
+                <div class="relative mx-auto w-64 h-64 sm:w-80 sm:h-80 bg-slate-900 rounded-2xl border-4 border-sky-500 overflow-hidden flex items-center justify-center shadow-inner">
+                    
+                    <!-- Area untuk Video Scanner -->
+                    <div id="reader" class="absolute inset-0 w-full h-full"></div>
+
+                    <i id="icon-kamera" class="fa-solid fa-camera text-5xl text-slate-600 absolute transition-opacity duration-300 z-10"></i>
+                    
+                    <!-- Efek Scanner (Berada di atas video) -->
+                    <div id="efek-scan" class="scan-line hidden z-20"></div>
+                    
+                    <!-- Sudut-sudut frame UI (z-30 agar selalu di atas) -->
+                    <div class="absolute top-4 left-4 w-6 h-6 border-t-4 border-l-4 border-white z-30"></div>
+                    <div class="absolute top-4 right-4 w-6 h-6 border-t-4 border-r-4 border-white z-30"></div>
+                    <div class="absolute bottom-4 left-4 w-6 h-6 border-b-4 border-l-4 border-white z-30"></div>
+                    <div class="absolute bottom-4 right-4 w-6 h-6 border-b-4 border-r-4 border-white z-30"></div>
+                </div>
+                
+                <!-- Tombol Action -->
+                <button id="btn-scan" onclick="mulaiKamera()" class="mt-8 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center mx-auto space-x-2 w-full sm:w-auto">
+                    <i class="fa-solid fa-camera-retro"></i>
+                    <span>Scan QR</span>
+                </button>
+                
+                <!-- Status Scan -->
+                <div id="hasil-scan" class="mt-6 font-bold text-lg min-h-[32px] flex items-center justify-center transition-colors duration-300">
+                    <span class="text-gray-400 text-sm font-normal">Kamera belum aktif. Klik tombol di atas.</span>
+                </div>
+            </div>
+
+            <!-- Bagian Riwayat Absensi -->
+            <div class="mt-8 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Riwayat Kehadiran Hari Ini</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 text-sm">
+                                <th class="p-3 rounded-tl-lg rounded-bl-lg">Nama Atlet</th>
+                                <th class="p-3">Waktu</th>
+                                <th class="p-3 rounded-tr-lg rounded-br-lg text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabel-riwayat">
+                            <tr>
+                                <td colspan="3" class="text-center p-4 text-gray-400 text-sm italic" id="pesan-kosong">Belum ada data absensi.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- 1. DATA MASTER & AUTENTIKASI ---
+        // --- CEK LOGIN HYBRID UNTUK ABSENSI ---
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentUser = JSON.parse(localStorage.getItem('sac_currentUser'));
+
+        if (!currentUser && urlParams.has('nama')) {
+            currentUser = {
+                nama: urlParams.get('nama'),
+                isAdmin: urlParams.get('admin') === 'true'
+            };
+            localStorage.setItem('sac_currentUser', JSON.stringify(currentUser));
+        }
+
+        if (!currentUser) {
+            alert("Anda belum login! Dialihkan ke halaman utama.");
+            window.location.href = "index.html";
+        }
+
+        // Ambil data anggota dari Local Storage (dari index.html)
+        // PRO: Tangkap kamus anggota dari URL agar sinkron dengan index.html
+            const dataAnggota = {};
+            const paketAtlet = urlParams.get('atlet');
+            if (paketAtlet) {
+                const daftarAtlet = paketAtlet.split(',');
+                daftarAtlet.forEach(item => {
+                const bagian = item.split('|');
+                if (bagian.length === 2) {
+                    dataAnggota[bagian[0]] = bagian[1]; // Mapping SAC-001 -> Ahmad Fatih
+                }
+            });
+        }
+
+        // Ambil riwayat absen yang sudah ada
+        let riwayatAbsen = JSON.parse(localStorage.getItem('sac_riwayatAbsen')) || [];
+
+        // Render riwayat absen saat halaman dimuat
+        window.addEventListener('DOMContentLoaded', () => {
+            if (riwayatAbsen.length > 0) {
+                const pesanKosong = document.getElementById('pesan-kosong');
+                if (pesanKosong) pesanKosong.parentElement.remove();
+                
+                // Render ulang tabel
+                riwayatAbsen.forEach(absen => {
+                    renderBarisTabel(absen.nama, absen.waktu);
+                });
+            }
+        });
+
+        // --- 2. UPDATE JAM REALTIME ---
+        function updateJam() {
+            const sekarang = new Date();
+            const jam = String(sekarang.getHours()).padStart(2, '0');
+            const menit = String(sekarang.getMinutes()).padStart(2, '0');
+            document.getElementById('jam-realtime').innerText = `${jam}:${menit}`;
+        }
+        setInterval(updateJam, 1000);
+        updateJam(); 
+
+        // --- 3. LOGIC SCANNER KAMERA ---
+        let html5QrCode; // Variabel global untuk scanner
+
+        function mulaiKamera() {
+            const btnScan = document.getElementById('btn-scan');
+            const iconKamera = document.getElementById('icon-kamera');
+            const efekScan = document.getElementById('efek-scan');
+            const hasilScan = document.getElementById('hasil-scan');
+
+            // Cek jika scanner sudah berjalan, maka jadikan tombol sebagai tombol Stop
+            if (html5QrCode && html5QrCode.isScanning) {
+                hentikanKamera();
+                return;
+            }
+
+            // Siapkan UI Scanner
+            btnScan.innerHTML = '<i class="fa-solid fa-stop"></i><span>Hentikan Kamera</span>';
+            btnScan.classList.replace('bg-sky-600', 'bg-red-500');
+            btnScan.classList.replace('hover:bg-sky-700', 'hover:bg-red-600');
+            
+            iconKamera.classList.add('hidden'); // Sembunyikan ikon kamera mati
+            efekScan.classList.remove('hidden'); // Tampilkan laser hijau
+            hasilScan.innerHTML = '<span class="text-sky-500 loading-pulse">Kamera aktif. Mencari QR Code...</span>';
+
+            // Inisialisasi Scanner
+            html5QrCode = new Html5Qrcode("reader");
+            
+            // Konfigurasi menggunakan kamera belakang (environment)
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch((err) => {
+                alert("Gagal mengakses kamera. Pastikan browser memberikan izin kamera.");
+                hentikanKamera();
+                console.error(err);
+            });
+        }
+
+        function hentikanKamera() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    resetUI();
+                }).catch(err => console.error("Error saat mematikan kamera:", err));
+            } else {
+                resetUI();
+            }
+        }
+
+        function resetUI() {
+            const btnScan = document.getElementById('btn-scan');
+            btnScan.innerHTML = '<i class="fa-solid fa-camera-retro"></i><span>Scan QR</span>';
+            btnScan.classList.replace('bg-red-500', 'bg-sky-600');
+            btnSearch = btnScan.classList.replace('hover:bg-red-600', 'hover:bg-sky-700');
+            
+            document.getElementById('icon-kamera').classList.remove('hidden');
+            document.getElementById('efek-scan').classList.add('hidden');
+            document.getElementById('hasil-scan').innerHTML = '<span class="text-gray-400 text-sm font-normal">Kamera dimatikan.</span>';
+        }
+
+        // --- 4. KETIKA QR CODE BERHASIL TERBACA ---
+        function onScanSuccess(decodedText) {
+            // Hentikan kamera sementara agar tidak double scan
+            hentikanKamera();
+            
+            const hasilScan = document.getElementById('hasil-scan');
+            
+            // Cek apakah data QR ada di database (Dashboard)
+            const namaAtlet = dataAnggota[decodedText];
+            
+            if (namaAtlet) {
+                // DATA VALID: Cek Jam Saat Ini
+                const sekarang = new Date();
+                const jam = sekarang.getHours(); 
+                
+                // Format jam untuk dimasukkan ke tabel
+                const menit = String(sekarang.getMinutes()).padStart(2, '0');
+                const jamRealtime = `${String(jam).padStart(2, '0')}:${menit}`;
+
+                if (jam >= 15) {
+                    // Jika jam 15:00 ke atas
+                    hasilScan.innerHTML = `
+                        <div class="bg-orange-100 text-orange-600 px-4 py-2 rounded-lg border border-orange-200">
+                            <i class="fa-solid fa-clock mr-2"></i>Absen di hari berikutnya
+                        </div>`;
+                } else {
+                    // Jika di bawah jam 15:00 (BERHASIL)
+                    hasilScan.innerHTML = `
+                        <div class="text-sky-600 text-xl">
+                            <i class="fa-solid fa-circle-check mr-2 text-2xl drop-shadow-md"></i>
+                            Berhasil: <strong>${namaAtlet}</strong>
+                        </div>`;
+                    
+                    // Masukkan ke tabel riwayat bawah
+                    tambahKeRiwayat(namaAtlet, jamRealtime);
+                }
+            } else {
+                // DATA TIDAK VALID (Bukan anggota)
+                hasilScan.innerHTML = `
+                    <div class="bg-red-100 text-red-600 px-4 py-2 rounded-lg border border-red-200">
+                        <i class="fa-solid fa-circle-xmark mr-2"></i>QR Code tidak dikenali (${decodedText})
+                    </div>`;
+            }
+
+            // Kembalikan tulisan instruksi ke semula setelah 4 detik
+            setTimeout(() => {
+                if(!html5QrCode?.isScanning) {
+                    document.getElementById('hasil-scan').innerHTML = '<span class="text-gray-400 text-sm font-normal">Klik tombol untuk scan lagi.</span>';
+                }
+            }, 4000);
+            // --- 5. FUNGSI MENAMBAH KE TABEL & SIMPAN ---
+        function tambahKeRiwayat(nama, waktu) {
+            // Simpan ke local storage
+            riwayatAbsen.unshift({ nama, waktu });
+            localStorage.setItem('sac_riwayatAbsen', JSON.stringify(riwayatAbsen));
+            
+            // Tampilkan ke UI
+            const pesanKosong = document.getElementById('pesan-kosong');
+            if (pesanKosong) pesanKosong.parentElement.remove();
+            renderBarisTabel(nama, waktu);
+        }
+
+        function renderBarisTabel(nama, waktu) {
+            const tbody = document.getElementById('tabel-riwayat');
+            const tr = document.createElement('tr');
+            tr.className = "border-b border-gray-50 hover:bg-sky-50 transition-colors";
+            tr.innerHTML = `
+                <td class="p-3 font-bold text-gray-800">${nama}</td>
+                <td class="p-3 text-gray-500 font-medium">${waktu} WIB</td>
+                <td class="p-3 text-center">
+                    <span class="bg-sky-100 text-sky-700 py-1 px-3 rounded-full text-xs font-bold border border-sky-200">
+                        <i class="fa-solid fa-check mr-1"></i>Hadir
+                    </span>
+                </td>
+            `;
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
+
+        }
+
+        // --- 5. FUNGSI MENAMBAH KE TABEL ---
+        function tambahKeRiwayat(nama, waktu) {
+            const tbody = document.getElementById('tabel-riwayat');
+            const pesanKosong = document.getElementById('pesan-kosong');
+            
+            if (pesanKosong) pesanKosong.parentElement.remove();
+
+            const tr = document.createElement('tr');
+            tr.className = "border-b border-gray-50 hover:bg-sky-50 transition-colors";
+            tr.innerHTML = `
+                <td class="p-3 font-bold text-gray-800">${nama}</td>
+                <td class="p-3 text-gray-500 font-medium">${waktu} WIB</td>
+                <td class="p-3 text-center">
+                    <span class="bg-sky-100 text-sky-700 py-1 px-3 rounded-full text-xs font-bold border border-sky-200">
+                        <i class="fa-solid fa-check mr-1"></i>Hadir
+                    </span>
+                </td>
+            `;
+
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
+    </script>
+</body>
+</html>

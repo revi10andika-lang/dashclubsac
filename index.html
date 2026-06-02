@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunnah Archery Community</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        archery: { light: '#3b82f6', DEFAULT: '#1e3a8a', dark: '#172554' },
+                        accent: { DEFAULT: '#f59e0b', hover: '#d97706' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; background-color: #f3f4f6; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .ticker-wrap { width: 100%; overflow: hidden; white-space: nowrap; }
+        .ticker-move { display: inline-block; animation: ticker 25s linear infinite; }
+        @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #sidebar { transition: transform 0.3s ease-in-out; }
+        .sidebar-closed { transform: translateX(100%); }
+        .sidebar-open { transform: translateX(0); }
+        #hero-slider { transition: background-image 1s ease-in-out; background-position: center; background-size: cover; }
+    </style>
+</head>
+<body class="text-gray-800 flex flex-col min-h-screen">
+
+    <!-- 0. HALAMAN AWAL (LOGIN SCREEN) - KOTAK DIPERKECIL -->
+    <div id="login-view" class="fixed inset-0 bg-archery-dark z-50 flex items-center justify-center p-4 transition-opacity duration-500">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center fade-in">
+            <!-- Logo diperkecil (w-24 h-24) -->
+            <img id="login-logo-img" src="https://placehold.co/150x150/1e3a8a/ffffff?text=SAC+Logo" alt="Logo" class="w-24 h-24 mx-auto rounded-full mb-4 border-4 border-gray-100 shadow-sm object-cover">
+            <h1 class="text-xl font-bold text-gray-800 mb-1">Selamat Datang</h1>
+            <p class="text-gray-500 mb-6 text-xs">Sunnah Archery Community Portal</p>
+            
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-user text-gray-400 text-sm"></i>
+                    </div>
+                    <input type="text" id="username" required placeholder="Username" class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-archery focus:border-archery outline-none transition-all text-sm">
+                </div>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-lock text-gray-400 text-sm"></i>
+                    </div>
+                    <input type="password" id="password" required placeholder="Password" class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-archery focus:border-archery outline-none transition-all text-sm">
+                </div>
+                <button type="submit" class="w-full bg-archery text-white font-bold py-2.5 px-4 rounded-xl hover:bg-archery-dark transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 text-sm">
+                    Masuk
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="main-app" class="hidden flex-grow flex flex-col relative w-full">
+        
+        <!-- 1. HEADER -->
+        <header class="bg-white shadow-md z-40 sticky top-0">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center cursor-pointer" onclick="navigateTo('dashboard')">
+                        <img id="dash-logo-img" src="https://placehold.co/100x40/1e3a8a/ffffff?text=SAC" alt="Logo" class="h-10 w-auto rounded object-cover">
+                        <span class="ml-3 font-bold text-xl text-archery hidden sm:block">Sunnah Archery</span>
+                    </div>
+                    <div>
+                        <button onclick="toggleSidebar()" class="text-gray-500 hover:text-archery focus:outline-none p-2 rounded-md hover:bg-gray-100 transition-colors">
+                            <i class="fa-solid fa-bars text-2xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 2. INFO BAR / TICKER BAR -->
+        <div class="bg-archery text-white text-sm py-2 px-4 flex flex-col sm:flex-row shadow-inner border-t border-archery-light z-30 relative">
+            <div class="flex items-center shrink-0 mb-2 sm:mb-0 sm:mr-4 font-semibold w-full sm:w-auto justify-center sm:justify-start">
+                <i class="fa-regular fa-clock mr-2"></i>
+                <span id="realtime-clock">Memuat Waktu...</span>
+            </div>
+            <div class="ticker-wrap flex-grow bg-archery-dark rounded px-2 py-1 overflow-hidden flex items-center">
+                <div class="ticker-move italic" id="baper-quote">
+                    "Memanah itu melatih kesabaran. Jika meleset, perbaiki posisi, bukan menyalahkan angin."
+                </div>
+            </div>
+        </div>
+
+        <!-- SIDEBAR OVERLAY & MENU -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden opacity-0 transition-opacity duration-300"></div>
+        
+        <div id="sidebar" class="fixed inset-y-0 right-0 max-w-xs w-full bg-white shadow-2xl z-50 sidebar-closed flex flex-col">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 class="text-xl font-bold text-archery">Menu Navigasi</h2>
+                <button onclick="toggleSidebar()" class="text-gray-400 hover:text-red-500 transition-colors p-2">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-4 flex flex-col gap-2 flex-grow overflow-y-auto">
+                <button onclick="navigateTo('dashboard')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-archery font-medium transition-colors flex items-center">
+                    <i class="fa-solid fa-house w-6 text-center mr-2"></i> Dashboard
+                </button>
+                <button onclick="navigateTo('anggota')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-archery font-medium transition-colors flex items-center">
+                    <i class="fa-solid fa-users w-6 text-center mr-2"></i> Anggota Club
+                </button>
+                <button onclick="navigateTo('pengurus')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-archery font-medium transition-colors flex items-center">
+                    <i class="fa-solid fa-sitemap w-6 text-center mr-2"></i> Pengurus Club
+                </button>
+                <button onclick="navigateTo('pelatih')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-archery font-medium transition-colors flex items-center">
+                    <i class="fa-solid fa-bullseye w-6 text-center mr-2"></i> Pelatih
+                </button>
+                <button onclick="bukaHalamanLuar('scoringdash.html')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-archery font-medium transition-colors flex items-center">
+                    <i class="fa-solid fa-clipboard-list w-6 text-center mr-2"></i> <span>Data Scoring</span>                     
+                </button>
+                <button onclick="bukaHalamanLuar('absenatlet.html')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-archery font-medium transition-colors flex items-center">
+                    <i class="fa-solid fa-qrcode w-6 text-center mr-2"></i> <span>Absensi Atlet</span>
+                </button>
+                <!-- Menu Pengaturan (Hanya untuk Admin) -->
+                <button id="menu-pengaturan" onclick="navigateTo('pengaturan')" class="hidden nav-btn w-full text-left px-4 py-3 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-800 font-bold transition-colors items-center mt-2">
+                    <i class="fa-solid fa-gear w-6 text-center mr-2 text-gray-600"></i> Pengaturan (Admin)
+                </button>
+            </div>
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center mb-4 px-2">
+                    <div class="w-10 h-10 rounded-full bg-archery-light text-white flex items-center justify-center font-bold mr-3 shadow" id="user-avatar">U</div>
+                    <div>
+                        <p class="font-bold text-gray-800" id="user-role-display">User</p>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-full bg-red-50 text-red-600 hover:bg-red-500 hover:text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center">
+                    <i class="fa-solid fa-right-from-bracket mr-2"></i> Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- AREA KONTEN DINAMIS -->
+        <main class="flex-grow flex flex-col relative pb-20 w-full overflow-x-hidden">
+            
+            <!-- VIEW: DASHBOARD -->
+            <div id="view-dashboard" class="view-section flex-grow flex flex-col w-full">
+                <!-- HERO SECTION -->
+                <div id="hero-slider" class="relative w-full h-[50vh] sm:h-[60vh] flex items-center justify-center bg-gray-800">
+                    <div class="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-[2px]"></div>
+                    <div class="relative z-10 text-center px-4 fade-in w-full max-w-4xl mx-auto">
+                        <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-6 tracking-tight drop-shadow-lg">
+                            Sunnah Archery Community
+                        </h1>
+                        <p class="text-lg sm:text-xl text-gray-200 mb-8 max-w-2xl mx-auto drop-shadow">
+                            Menghidupkan sunnah memanah, membangun ketangkasan, dan mempererat ukhuwah islamiyah.
+                        </p>
+                        <!-- Tombol CTA Dihilangkan sesuai permintaan -->
+                    </div>
+                </div>
+
+                <!-- MAIN CONTENT (Medalist Event Dinamis) -->
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
+                    <div class="text-center mb-10">
+                        <h2 class="text-3xl font-bold text-gray-800 inline-block relative">
+                            Prestasi Atlet
+                            <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-accent rounded"></div>
+                        </h2>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 w-full">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm sm:text-base">
+                                <thead class="bg-archery text-white">
+                                    <tr>
+                                        <th class="px-6 py-4 text-left font-semibold uppercase tracking-wider">Nama Atlet</th>
+                                        <th class="px-6 py-4 text-left font-semibold uppercase tracking-wider">Medali</th>
+                                        <th class="px-6 py-4 text-left font-semibold uppercase tracking-wider">Event / Kejuaraan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="public-table-prestasi" class="bg-white divide-y divide-gray-200">
+                                    <!-- Diisi oleh JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: ANGGOTA CLUB -->
+            <div id="view-anggota" class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full fade-in">
+                <h2 class="text-3xl font-bold text-gray-800 border-b-2 border-archery pb-2 mb-6">Daftar Anggota Club</h2>
+                <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID Anggota</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Lengkap</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Peran / Keterangan</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="public-table-anggota" class="bg-white divide-y divide-gray-200">
+                                <!-- Diisi oleh JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: PENGURUS CLUB -->
+            <div id="view-pengurus" class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full fade-in">
+                <h2 class="text-3xl font-bold text-gray-800 border-b-2 border-archery pb-2 mb-6">Struktur Pengurus</h2>
+                <div id="public-grid-pengurus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Diisi oleh JS -->
+                </div>
+            </div>
+
+            <!-- VIEW: PELATIH -->
+            <div id="view-pelatih" class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full fade-in">
+                <h2 class="text-3xl font-bold text-gray-800 border-b-2 border-archery pb-2 mb-6">Tim Pelatih</h2>
+                <div id="public-grid-pelatih" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Diisi oleh JS -->
+                </div>
+            </div>
+
+            <!-- VIEW: DATA SCORING (UNDER DEVELOPMENT) -->
+            <div id="view-scoring" class="view-section hidden max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full fade-in text-center">
+                <div class="bg-white p-10 rounded-3xl shadow-xl border border-gray-100 flex flex-col items-center">
+                    <i class="fa-solid fa-person-digging text-6xl text-archery mb-4"></i>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Scoring Dashboard Sunnah Archery</h2>
+                </div>
+            </div>
+
+            <!-- VIEW: ABSENSI ATLET (UNDER DEVELOPMENT) -->
+            <div id="view-absensi" class="view-section hidden max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full fade-in text-center">
+                <div class="bg-white p-10 rounded-3xl shadow-xl border border-gray-100 flex flex-col items-center">
+                    <i class="fa-solid fa-code text-6xl text-accent mb-4"></i>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Fitur Dalam Pengembangan</h2>
+                    <p class="text-gray-500">Sistem Absensi Barcode/QR Code sedang dalam tahap penyempurnaan.</p>
+                </div>
+            </div>
+
+            <!-- VIEW: PENGATURAN (KHUSUS ADMIN - PUSAT KENDALI) -->
+            <div id="view-pengaturan" class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full fade-in">
+                <div class="flex items-center mb-6">
+                    <i class="fa-solid fa-shield-halved text-4xl text-archery mr-4"></i>
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Pengaturan Umum</h2>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    <!-- Kiri: Pengaturan Tampilan & Generator -->
+                    <div class="space-y-8">
+                        <!-- Panel: Logo & Visual -->
+                        <div class="bg-white rounded-xl shadow-md border-t-4 border-archery p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-palette text-archery mr-2"></i>Pengaturan Visual</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Upload Logo Halaman Login (.jpg/.png)</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="file" id="input-login-logo" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-archery hover:file:bg-blue-100 transition cursor-pointer">
+                                        <button onclick="saveLogo('login')" class="bg-archery text-white px-4 py-2 rounded-lg hover:bg-archery-dark transition text-sm font-medium shrink-0">Terapkan</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Upload Logo Navbar (.jpg/.png)</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="file" id="input-dash-logo" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-archery hover:file:bg-blue-100 transition cursor-pointer">
+                                        <button onclick="saveLogo('dash')" class="bg-archery text-white px-4 py-2 rounded-lg hover:bg-archery-dark transition text-sm font-medium shrink-0">Terapkan</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel: Background Slider -->
+                        <div class="bg-white rounded-xl shadow-md border-t-4 border-archery p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-images text-archery mr-2"></i>Kelola Foto Slider Dashboard</h3>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Upload Foto Slider Baru (.jpg/.png)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="file" id="input-new-slider" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition cursor-pointer">
+                                    <button onclick="addSlider()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium shrink-0"><i class="fa-solid fa-plus mr-1"></i> Tambah</button>
+                                </div>
+                            </div>
+                            <p class="text-sm font-medium text-gray-700 mb-2">Daftar Foto Saat Ini:</p>
+                            <ul id="admin-slider-list" class="space-y-2 bg-gray-50 p-3 rounded border border-gray-200 max-h-40 overflow-y-auto">
+                                <!-- Diisi oleh JS -->
+                            </ul>
+                        </div>
+
+                        <!-- Panel: QR Code Generator -->
+                        <div class="bg-white rounded-xl shadow-md border-t-4 border-accent p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-qrcode text-accent mr-2"></i>Generator QR Code ID Card</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Anggota</label>
+                                    <select id="member-select" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
+                                        <option value="">-- Pilih Anggota --</option>
+                                    </select>
+                                </div>
+                                <button onclick="generateQRCode()" class="w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-black transition font-medium shadow"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Generate QR Code</button>
+                                
+                                <div id="mock-barcode-result" class="hidden mt-4 text-center p-4 bg-gray-50 border border-dashed border-gray-300 rounded-lg">
+                                    <img id="qr-code-img" src="" class="mx-auto mb-2 w-32 h-32 object-contain" alt="QR Code">
+                                    <p class="font-bold text-gray-800 text-sm" id="qr-code-name">Nama Anggota</p>
+                                    <p class="text-xs text-archery font-mono mt-1" id="qr-code-id">SAC-XXX</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kanan: Manajemen Data (SDM & Prestasi) -->
+                    <div class="space-y-8">
+                        
+                        <!-- Panel: Kelola SDM Keseluruhan -->
+                        <div class="bg-white rounded-xl shadow-md border-t-4 border-blue-500 p-6">
+                            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                                <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-users-gear text-blue-500 mr-2"></i>Kelola Anggota & Akun</h3>
+                                <button onclick="openModal('anggota')" class="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1.5 rounded font-bold transition"><i class="fa-solid fa-plus mr-1"></i> Tambah</button>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-3">Buat akun untuk Anggota Biasa, Pengurus, atau Pelatih di sini agar mereka bisa login.</p>
+                            <div class="overflow-x-auto max-h-80 overflow-y-auto border rounded">
+                                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                    <thead class="bg-gray-50 sticky top-0">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500">Nama & Peran</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500">Akun (User/Pass)</th>
+                                            <th class="px-3 py-2 text-center font-medium text-gray-500">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-table-anggota" class="bg-white divide-y divide-gray-200">
+                                        <!-- Diisi oleh JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Panel: Kelola Prestasi -->
+                        <div class="bg-white rounded-xl shadow-md border-t-4 border-yellow-500 p-6">
+                            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                                <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-medal text-yellow-500 mr-2"></i>Kelola Prestasi</h3>
+                                <button onclick="openModal('prestasi')" class="text-xs bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-3 py-1.5 rounded font-bold transition"><i class="fa-solid fa-plus mr-1"></i> Tambah</button>
+                            </div>
+                            <div class="overflow-x-auto max-h-60 overflow-y-auto border rounded">
+                                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                    <thead class="bg-gray-50 sticky top-0">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500">Nama Atlet</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500">Medali & Event</th>
+                                            <th class="px-3 py-2 text-center font-medium text-gray-500">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-table-prestasi" class="bg-white divide-y divide-gray-200">
+                                        <!-- Diisi oleh JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </main>
+        
+        <!-- FOOTER -->
+       <footer class="w-full py-4 mt-auto bg-transparent z-20 flex justify-center items-center pb-6">
+            <p class="text-[11px] text-gray-400 font-medium tracking-widest hover:text-gray-500 transition-colors cursor-default">
+                Powered by: Revie Scout
+            </p>
+        </footer>
+    </div>
+
+    <!-- KOMPONEN NOTIFIKASI -->
+    <div id="notification" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-[60] hidden bg-white rounded shadow-lg border-l-4 p-4 min-w-[300px] transition-all duration-300">
+        <div class="flex items-center">
+            <div id="notif-icon" class="mr-3 text-lg"></div>
+            <p id="notif-msg" class="text-sm font-medium text-gray-700 flex-grow"></p>
+        </div>
+    </div>
+
+    <!-- MODAL CUSTOM UNTUK FORM TAMBAH DATA -->
+    <div id="custom-modal" class="fixed inset-0 z-[100] hidden opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div id="modal-content-box" class="relative bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform scale-95 transition-transform duration-300 sm:my-8 sm:max-w-lg w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-archery-light bg-opacity-20 sm:mx-0 sm:h-10 sm:w-10">
+                            <i class="fa-solid fa-pen-to-square text-archery"></i>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-bold text-gray-900" id="modal-title">Judul Modal</h3>
+                            <div class="mt-4 space-y-3" id="modal-body">
+                                <!-- Isi Form Disuntikkan via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" id="modal-submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-archery text-base font-medium text-white hover:bg-archery-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition">
+                        Simpan
+                    </button>
+                    <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition">
+                        Batal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. STATE & DATA (Sinkronisasi dengan Local Storage) ---
+    let isAdmin = false;
+    let currentView = 'dashboard';
+    let currentBgIndex = 0;
+    let sliderInterval;
+
+    const quotes = [
+        "Fokus pada target, lupakan mantan.",
+        "Busur ditarik mundur agar anak panah melesat maju. Jangan menyerah.",
+        "Tarik nafas, luruskan niat, bidik dengan hati.",
+        "Cinta itu seperti memanah, butuh ketepatan dan waktu yang pas."
+    ];
+
+    // Template database awal jika local storage masih kosong
+    const defaultState = {
+        logos: {
+            login: 'https://placehold.co/150x150/1e3a8a/ffffff?text=SAC+Logo',
+            dash: 'https://placehold.co/100x40/1e3a8a/ffffff?text=SAC'
+        },
+        heroImages: [
+            'https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80',
+            'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80'
+        ],
+        anggota: [
+            { id: 'SAC-001', nama: 'Ahmad Fatih', role: 'Anggota Biasa', keterangan: '-', username: 'ahmad', password: '123', status: 'Aktif' },
+            { id: 'SAC-002', nama: 'Ust. Abdul Malik', role: 'Pengurus', keterangan: 'Ketua / Pembina', username: 'abdul', password: '123', status: 'Aktif' },
+            { id: 'SAC-003', nama: 'Coach Ibnu', role: 'Pelatih', keterangan: 'Lisensi Nasional C', username: 'ibnu', password: '123', status: 'Aktif' }
+        ],
+        prestasi: [
+            { nama: 'Ahmad Fatih', medali: 'Emas', event: 'Kejurda Panahan Jabar 2023' },
+            { nama: 'Budi Santoso', medali: 'Perak', event: 'Archery Open Tournament Jakarta' }
+        ]
+    };
+
+    // Ambil data aktif dari penyimpanan local browser
+    let appState = JSON.parse(localStorage.getItem('sac_appState')) || defaultState;
+
+    // Fungsi utilitas untuk menyimpan setiap perubahan data
+    function saveState() {
+        localStorage.setItem('sac_appState', JSON.stringify(appState));
+    }
+
+    // --- 2. INISIALISASI & KONTROL LOGIN ---
+    document.addEventListener('DOMContentLoaded', () => {
+        applyLogos();
+        startClock();
+        updateQuote();
+        setInterval(updateQuote, 15000);
+
+        // Fitur Auto-Login: Cek apakah sesi user sebelumnya masih aktif
+        const loggedInUser = JSON.parse(localStorage.getItem('sac_currentUser'));
+        if (loggedInUser) {
+            isAdmin = loggedInUser.isAdmin;
+            loginSuccess(loggedInUser.nama, loggedInUser.nama.charAt(0).toUpperCase());
+        }
+    });
+
+    function handleLogin(e) {
+        e.preventDefault();
+        const userVal = document.getElementById('username').value.trim();
+        const passVal = document.getElementById('password').value.trim();
+
+        // Validasi Akun Super Admin
+        if (userVal === 'admin' && passVal === 'admin123') {
+            isAdmin = true;
+            const adminUser = { nama: 'Admin', isAdmin: true };
+            localStorage.setItem('sac_currentUser', JSON.stringify(adminUser));
+            loginSuccess('Admin', 'A');
+            return;
+        }
+
+        // Validasi Akun Anggota/Pengurus/Pelatih dari database dinamis
+        const foundUser = appState.anggota.find(a => a.username === userVal && a.password === passVal);
+        if (foundUser) {
+            isAdmin = false;
+            const normalUser = { nama: foundUser.nama, isAdmin: false };
+            localStorage.setItem('sac_currentUser', JSON.stringify(normalUser));
+            loginSuccess(foundUser.nama, foundUser.nama.charAt(0).toUpperCase());
+        } else {
+            showNotif('Username atau Password salah!', 'error');
+        }
+    }
+
+    function loginSuccess(roleName, avatarLetter) {
+        // Efek transisi menyembunyikan form login dan menampilkan dashboard utama
+        document.getElementById('login-view').classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            
+            document.getElementById('user-role-display').textContent = roleName;
+            document.getElementById('user-avatar').textContent = avatarLetter;
+            
+            const menuPengaturan = document.getElementById('menu-pengaturan');
+            if(isAdmin) {
+                menuPengaturan.classList.remove('hidden');
+                menuPengaturan.classList.add('flex');
+            } else {
+                menuPengaturan.classList.add('hidden');
+                menuPengaturan.classList.remove('flex');
+            }
+
+            refreshAllViews();
+            
+            document.getElementById('hero-slider').style.backgroundImage = `url('${appState.heroImages[0]}')`;
+            if(sliderInterval) clearInterval(sliderInterval);
+            sliderInterval = setInterval(slideBackground, 5000);
+            
+            showNotif(`Berhasil login sebagai ${roleName}`, 'success');
+        }, 500);
+    }
+
+    function logout() {
+        clearInterval(sliderInterval);
+        localStorage.removeItem('sac_currentUser'); // Hapus jejak autentikasi browser
+        document.getElementById('main-app').classList.add('hidden');
+        document.getElementById('login-view').classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        document.getElementById('login-form').reset();
+        navigateTo('dashboard');
+        
+        const sidebar = document.getElementById('sidebar');
+        if(sidebar.classList.contains('sidebar-open')) toggleSidebar();
+        
+        showNotif('Anda telah logout', 'info');
+    }
+
+    // --- 3. RENDERING INTERFACE DATA ---
+    function refreshAllViews() {
+        renderAnggota();
+        renderPengurus();
+        renderPelatih();
+        renderPrestasi();
+        if(isAdmin) renderSettingsPanel();
+    }
+
+    function getMedalBadge(medali) {
+        if(medali.toLowerCase() === 'emas') return `<span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200"><i class="fa-solid fa-medal mr-1"></i> Emas</span>`;
+        if(medali.toLowerCase() === 'perak') return `<span class="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-xs font-bold border border-gray-300"><i class="fa-solid fa-medal mr-1"></i> Perak</span>`;
+        return `<span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-bold border border-orange-200"><i class="fa-solid fa-medal mr-1"></i> Perunggu</span>`;
+    }
+
+    function renderPrestasi() {
+        const publicTbody = document.getElementById('public-table-prestasi');
+        if(publicTbody) {
+            publicTbody.innerHTML = appState.prestasi.map(p => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${p.nama}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${getMedalBadge(p.medali)}</td>
+                    <td class="px-6 py-4 text-gray-600">${p.event}</td>
+                </tr>
+            `).join('');
+        }
+
+        if(!isAdmin) return;
+        const adminTbody = document.getElementById('admin-table-prestasi');
+        if(adminTbody) {
+            adminTbody.innerHTML = appState.prestasi.map((p, index) => `
+                <tr class="hover:bg-gray-50 border-b">
+                    <td class="px-3 py-2 text-xs font-medium">${p.nama}</td>
+                    <td class="px-3 py-2 text-xs">${getMedalBadge(p.medali)} <br> <span class="text-[10px] text-gray-500">${p.event}</span></td>
+                    <td class="px-3 py-2 text-center text-xs">
+                        <button onclick="hapusData('prestasi', ${index})" class="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    function renderAnggota() {
+        const publicTbody = document.getElementById('public-table-anggota');
+        if(publicTbody) {
+            publicTbody.innerHTML = appState.anggota.map(a => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${a.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${a.nama}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-archery font-medium">${a.role} <span class="text-xs text-gray-400">(${a.keterangan})</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">${a.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        if(!isAdmin) return;
+        
+        const adminTbody = document.getElementById('admin-table-anggota');
+        if(adminTbody) {
+            adminTbody.innerHTML = appState.anggota.map((a, index) => `
+                <tr class="hover:bg-gray-50 border-b">
+                    <td class="px-3 py-2 text-xs">
+                        <div class="font-bold text-gray-800">${a.nama}</div>
+                        <div class="text-[10px] text-archery">${a.role} | ID: ${a.id}</div>
+                    </td>
+                    <td class="px-3 py-2 text-xs">
+                        <div>U: <span class="font-mono bg-gray-100 px-1">${a.username}</span></div>
+                        <div>P: <span class="font-mono bg-gray-100 px-1">${a.password}</span></div>
+                    </td>
+                    <td class="px-3 py-2 text-center text-xs">
+                        <button onclick="hapusData('anggota', ${index})" class="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        const select = document.getElementById('member-select');
+        if(select) {
+            select.innerHTML = '<option value="">-- Pilih Anggota --</option>' + appState.anggota.map(a => `<option value="${a.id}">${a.id} - ${a.nama}</option>`).join('');
+        }
+    }
+
+    function renderPengurus() {
+        const publicGrid = document.getElementById('public-grid-pengurus');
+        if(publicGrid) {
+            const pengurusOnly = appState.anggota.filter(a => a.role === 'Pengurus');
+            publicGrid.innerHTML = pengurusOnly.map(p => `
+                <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-archery text-center transform transition hover:-translate-y-1 hover:shadow-lg">
+                    <div class="w-20 h-20 mx-auto bg-gray-200 rounded-full mb-4 overflow-hidden border-2 border-gray-100"><img src="https://ui-avatars.com/api/?name=${encodeURIComponent(p.nama)}&background=random" class="w-full h-full object-cover"></div>
+                    <h3 class="text-lg font-bold text-gray-900">${p.nama}</h3>
+                    <p class="text-archery font-medium text-sm mt-1">${p.keterangan}</p>
+                </div>
+            `).join('');
+        }
+    }
+
+    function renderPelatih() {
+        const publicGrid = document.getElementById('public-grid-pelatih');
+        if(publicGrid) {
+            const pelatihOnly = appState.anggota.filter(a => a.role === 'Pelatih');
+            publicGrid.innerHTML = pelatihOnly.map(p => `
+                <div class="bg-white rounded-xl shadow-md flex items-center p-4 border border-gray-100 transform transition hover:shadow-lg">
+                    <div class="w-16 h-16 bg-gray-200 rounded-full mr-4 flex-shrink-0 overflow-hidden"><img src="https://ui-avatars.com/api/?name=${encodeURIComponent(p.nama)}&background=1e3a8a&color=fff" class="w-full h-full object-cover"></div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">${p.nama}</h3>
+                        <p class="text-gray-500 text-sm mt-1"><i class="fa-solid fa-id-badge text-archery mr-1"></i> ${p.keterangan}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    function renderSettingsPanel() {
+        const list = document.getElementById('admin-slider-list');
+        if(list) {
+            list.innerHTML = appState.heroImages.map((url, index) => `
+                <li class="flex justify-between items-center text-xs bg-white p-2 rounded border border-gray-100 shadow-sm">
+                    <div class="flex items-center truncate w-3/4">
+                        <img src="${url}" class="w-8 h-8 object-cover rounded mr-2 border border-gray-200">
+                        <span class="truncate text-gray-500">Gambar ${index + 1}</span>
+                    </div>
+                    <button onclick="hapusSlider(${index})" class="text-red-500 hover:bg-red-50 px-2 py-1 rounded transition"><i class="fa-solid fa-trash"></i></button>
+                </li>
+            `).join('');
+        }
+    }
+
+    // --- 4. ENGINE SISTEM KENDALI UTAMA ---
+    function applyLogos() {
+        const loginImg = document.getElementById('login-logo-img');
+        const dashImg = document.getElementById('dash-logo-img');
+        if(loginImg) loginImg.src = appState.logos.login;
+        if(dashImg) dashImg.src = appState.logos.dash;
+    }
+
+    function saveLogo(type) {
+        const fileInput = document.getElementById(`input-${type}-logo`);
+        if(!fileInput.files || fileInput.files.length === 0) return showNotif('Pilih file gambar dulu!', 'error');
+        
+        const file = fileInput.files[0];
+        appState.logos[type] = URL.createObjectURL(file);
+        saveState();
+        applyLogos();
+        showNotif('Logo berhasil diperbarui!', 'success');
+        fileInput.value = '';
+    }
+
+    function addSlider() {
+        const fileInput = document.getElementById('input-new-slider');
+        if(!fileInput.files || fileInput.files.length === 0) return showNotif('Pilih file gambar dulu!', 'error');
+        
+        const file = fileInput.files[0];
+        appState.heroImages.push(URL.createObjectURL(file));
+        saveState();
+        fileInput.value = '';
+        renderSettingsPanel();
+        
+        const slider = document.getElementById('hero-slider');
+        if(slider) slider.style.backgroundImage = `url('${appState.heroImages[appState.heroImages.length - 1]}')`;
+        currentBgIndex = appState.heroImages.length - 1;
+        showNotif('Foto slider ditambahkan!', 'success');
+    }
+
+    function hapusSlider(index) {
+        if(appState.heroImages.length <= 1) return showNotif('Minimal harus ada 1 foto slider', 'error');
+        appState.heroImages.splice(index, 1);
+        saveState();
+        renderSettingsPanel();
+        const slider = document.getElementById('hero-slider');
+        if(slider) slider.style.backgroundImage = `url('${appState.heroImages[0]}')`;
+        currentBgIndex = 0;
+        showNotif('Foto dihapus', 'info');
+    }
+
+    function hapusData(type, index) {
+        appState[type].splice(index, 1);
+        saveState();
+        refreshAllViews();
+        showNotif(`Data berhasil dihapus`, 'info');
+    }
+
+    // --- 5. LOGIKA MODAL POP-UP INPUT DATA ---
+    let currentModalAction = '';
+
+    function openModal(type) {
+        const modal = document.getElementById('custom-modal');
+        const box = document.getElementById('modal-content-box');
+        const title = document.getElementById('modal-title');
+        const body = document.getElementById('modal-body');
+        const btn = document.getElementById('modal-submit');
+        
+        currentModalAction = type;
+
+        if (type === 'anggota') {
+            title.textContent = 'Tambah Akun & Anggota Baru';
+            body.innerHTML = `
+                <input type="text" id="inp-id" placeholder="ID (Contoh: SAC-004)" class="w-full border rounded px-3 py-2 mb-2 focus:ring-archery outline-none text-sm">
+                <input type="text" id="inp-nama" placeholder="Nama Lengkap" class="w-full border rounded px-3 py-2 mb-2 focus:ring-archery outline-none text-sm">
+                <select id="inp-role" class="w-full border rounded px-3 py-2 mb-2 outline-none text-sm bg-white">
+                    <option value="Anggota Biasa">Anggota Biasa</option>
+                    <option value="Pengurus">Pengurus</option>
+                    <option value="Pelatih">Pelatih</option>
+                </select>
+                <input type="text" id="inp-ket" placeholder="Keterangan (Cth: Ketua / Lisensi B)" class="w-full border rounded px-3 py-2 mb-4 focus:ring-archery outline-none text-sm">
+                <p class="text-xs font-bold text-gray-500 mb-1 border-t pt-2">Buat Akses Login:</p>
+                <div class="flex gap-2">
+                    <input type="text" id="inp-user" placeholder="Username" class="w-1/2 border rounded px-3 py-2 focus:ring-archery outline-none text-sm">
+                    <input type="text" id="inp-pass" placeholder="Password" class="w-1/2 border rounded px-3 py-2 focus:ring-archery outline-none text-sm">
+                </div>
+            `;
+        } else if (type === 'prestasi') {
+            title.textContent = 'Tambah Data Prestasi';
+            body.innerHTML = `
+                <input type="text" id="inp-nama-atlet" placeholder="Nama Atlet" class="w-full border rounded px-3 py-2 mb-2 focus:ring-archery outline-none text-sm">
+                <select id="inp-medali" class="w-full border rounded px-3 py-2 mb-2 outline-none text-sm bg-white">
+                    <option value="Emas">Emas</option>
+                    <option value="Perak">Perak</option>
+                    <option value="Perunggu">Perunggu</option>
+                </select>
+                <input type="text" id="inp-event" placeholder="Nama Event / Kejuaraan" class="w-full border rounded px-3 py-2 focus:ring-archery outline-none text-sm">
+            `;
+        }
+
+        btn.onclick = saveModalData;
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+        }, 10);
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('custom-modal');
+        const box = document.getElementById('modal-content-box');
+        modal.classList.add('opacity-0');
+        box.classList.remove('scale-100');
+        box.classList.add('scale-95');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+
+    function saveModalData() {
+        if (currentModalAction === 'anggota') {
+            const id = document.getElementById('inp-id').value.trim();
+            const nama = document.getElementById('inp-nama').value.trim();
+            const role = document.getElementById('inp-role').value;
+            const keterangan = document.getElementById('inp-ket').value.trim() || '-';
+            const username = document.getElementById('inp-user').value.trim();
+            const password = document.getElementById('inp-pass').value.trim();
+            
+            if(!id || !nama || !username || !password) return showNotif('Lengkapi data wajib & login!', 'error');
+            appState.anggota.push({ id, nama, role, keterangan, username, password, status: 'Aktif' });
+            
+        } else if (currentModalAction === 'prestasi') {
+            const nama = document.getElementById('inp-nama-atlet').value.trim();
+            const medali = document.getElementById('inp-medali').value;
+            const event = document.getElementById('inp-event').value.trim();
+            
+            if(!nama || !event) return showNotif('Isi nama atlet dan event!', 'error');
+            appState.prestasi.push({ nama, medali, event });
+        }
+
+        saveState(); // Simpan pembaharuan data ke LocalStorage
+        refreshAllViews();
+        closeModal();
+        showNotif('Data berhasil ditambahkan!', 'success');
+    }
+
+    // --- 6. UTILITIES & NAVIGASI SISTEM ---
+    function navigateTo(viewId) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`view-${viewId}`).classList.remove('hidden');
+        currentView = viewId;
+        
+        const sidebar = document.getElementById('sidebar');
+        if(sidebar.classList.contains('sidebar-open')) toggleSidebar();
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        if (sidebar.classList.contains('sidebar-closed')) {
+            sidebar.classList.remove('sidebar-closed', 'hidden');
+            sidebar.classList.add('sidebar-open');
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.add('opacity-100'), 10);
+        } else {
+            sidebar.classList.remove('sidebar-open');
+            sidebar.classList.add('sidebar-closed');
+            overlay.classList.remove('opacity-100');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
+    }
+
+    function showNotif(msg, type = 'info') {
+        const notif = document.getElementById('notification');
+        const notifMsg = document.getElementById('notif-msg');
+        const notifIcon = document.getElementById('notif-icon');
+        
+        notifMsg.textContent = msg;
+        notif.className = 'fixed top-5 left-1/2 transform -translate-x-1/2 z-[60] hidden bg-white rounded shadow-lg border-l-4 p-4 min-w-[300px] transition-all duration-300';
+        
+        if (type === 'success') {
+            notif.classList.add('border-green-500', 'text-green-800');
+            notifIcon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i>';
+        } else if (type === 'error') {
+            notif.classList.add('border-red-500', 'text-red-800');
+            notifIcon.innerHTML = '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+        } else {
+            notif.classList.add('border-blue-500', 'text-blue-800');
+            notifIcon.innerHTML = '<i class="fa-solid fa-circle-info text-blue-500"></i>';
+        }
+
+        notif.classList.remove('hidden');
+        setTimeout(() => notif.classList.add('translate-y-4'), 10);
+        
+        setTimeout(() => {
+            notif.classList.remove('translate-y-4');
+            setTimeout(() => notif.classList.add('hidden'), 300);
+        }, 3000);
+    }
+
+    function startClock() {
+        const clockEl = document.getElementById('realtime-clock');
+        if(!clockEl) return;
+        setInterval(() => {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            clockEl.textContent = `${now.toLocaleDateString('id-ID', options)} | ${now.toLocaleTimeString('id-ID')}`;
+        }, 1000);
+    }
+
+    function updateQuote() {
+        const qEl = document.getElementById('baper-quote');
+        if(qEl) qEl.textContent = `"${quotes[Math.floor(Math.random() * quotes.length)]}"`;
+    }
+
+    function slideBackground() {
+        if (appState.heroImages.length === 0) return;
+        currentBgIndex = (currentBgIndex + 1) % appState.heroImages.length;
+        const slider = document.getElementById('hero-slider');
+        if(slider) slider.style.backgroundImage = `url('${appState.heroImages[currentBgIndex]}')`;
+    }
+
+    // Generator QR Code Simulasi
+    function generateQRCode() {
+        const select = document.getElementById('member-select');
+        const result = document.getElementById('mock-barcode-result');
+        const qrImg = document.getElementById('qr-code-img');
+        const qrName = document.getElementById('qr-code-name');
+        const qrId = document.getElementById('qr-code-id');
+        
+        if(select.value === '') return showNotif('Pilih anggota terlebih dahulu!', 'error');
+        
+        const selectedOption = select.options[select.selectedIndex].text;
+        const memberId = select.value;
+        const memberName = selectedOption.split(' - ')[1];
+        
+        const qrData = `ID:${memberId} | Nama:${memberName} | Klub:SAC`;
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
+        
+        qrName.textContent = memberName;
+        qrId.textContent = memberId;
+        
+        result.classList.remove('hidden');
+        showNotif('QR Code berhasil di-generate!', 'success');
+    }
+// --- TAMBAHAN BARU: FUNGSI NAVIGASI INTER-FILE SECARA AMAN & BAWA DATA ---
+    function bukaHalamanLuar(namaFile) {
+        const loggedInUser = JSON.parse(localStorage.getItem('sac_currentUser'));
+        
+        // Bungkus data anggota (Format: ID|Nama,ID|Nama)
+        let paketDataAtlet = "";
+        if (appState && appState.anggota) {
+            paketDataAtlet = appState.anggota.map(a => `${a.id}|${a.nama}`).join(',');
+        }
+
+        if (loggedInUser) {
+            // Kirim data login DAN data atlet lewat URL
+            window.location.href = `${namaFile}?nama=${encodeURIComponent(loggedInUser.nama)}&admin=${loggedInUser.isAdmin}&atlet=${encodeURIComponent(paketDataAtlet)}`;
+        } else {
+            // Walau belum login, tetap kirim data atlet (untuk absensi)
+            window.location.href = `${namaFile}?atlet=${encodeURIComponent(paketDataAtlet)}`;
+        }
+    }
+    </script>
+</body>
+</html>
